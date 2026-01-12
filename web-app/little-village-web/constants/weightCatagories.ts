@@ -1,0 +1,15 @@
+export const weightCategories = [
+  "Private",
+  "Corporate",
+  "Hub",
+  "Charity Partner",
+  "Waste recycling",
+  "Textile recycling",
+  "Collection Service",
+  "Purchases",
+  "Miscellaneous Delivery",
+  "Big Kit",
+  "LV Donation Point",
+  "School",
+  "Other",
+];
