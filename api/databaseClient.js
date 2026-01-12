@@ -79,49 +79,70 @@ async function insertWeight(record) {
       }
     }
 
-    let containerColumnNames = "";
+    let containerColumnNames = "parentId";
     let containerColumnNamesList = [];
-    let containerVariableNames = "";
+    let containerVariableValues = "";
+
     //get container column names
     for (let attributeName in containers[0]) {
       containerColumnNames += "," + attributeName;
       containerColumnNamesList.push(attributeName);
     }
 
-    for (let container in containers) {
-      let containerColumnValues = "(";
-      for (let attributeName in containerColumnNamesList) {
-        containerColumnValues += "'" + container[attributeName] + ",'";
+    console.log(`\nColumn Names: `);
+    for (let i = 0; i < containerColumnNamesList.length; i++) {
+      console.log(containerColumnNamesList[i]);
+    }
+    console.log(containers);
+    console.log("\nContainers: \n");
+
+    for (let i = 0; i < containers.length; i++) {
+      let container = containers[i];
+      console.log(container);
+
+      let containerColumnValues = "(@wr1Id, ";
+
+      console.log("\nColumn Values: ");
+
+      for (let j = 0; j < containerColumnNamesList.length; j++) {
+        let attributeName = containerColumnNamesList[j];
+        console.log(`${attributeName}: ${container[attributeName]}`);
+        containerColumnValues += "'" + container[attributeName] + "',";
       }
-      containerColumnValues = columnValues.substring(
+
+      containerColumnValues = containerColumnValues.substring(
         0,
-        columnValues.length - 1
+        containerColumnValues.length - 1
       ); // remove final comma
       containerColumnValues += "),";
-      containerVariableNames += containerColumnValues + ",";
+      containerVariableValues += containerColumnValues;
     }
-    containerVariableNames = containerVariableNames.substring(
+    containerVariableValues = containerVariableValues.substring(
       0,
-      containerVariableNames.length - 1
+      containerVariableValues.length - 1
     ); //remove final comma
 
-    containerColumnNames = containerColumnNames.substring(1); //remove initial comma
     columnNames = columnNames.substring(1); //remove initial comma
     variableNames = variableNames.substring(1); //remove initial comma
 
     let pool = await sql.connect(sqlConfig);
 
-    let result = await pool
-      .request()
-      .query(
-        `INSERT INTO WeightRecord (${columnNames}) VALUES(${variableNames})`
-      );
+    let query = `
+      BEGIN TRANSACTION;
+      DECLARE @wr1Id INT;
 
-    let result2 = await pool
-      .request()
-      .query(
-        `INSERT INTO Containers (${containerColumnNames}) VALUES(${containerVariableNames})`
-      );
+      INSERT INTO WeightRecord (${columnNames})
+      VALUES (${variableNames});
+
+      SET @wr1Id = SCOPE_IDENTITY();
+
+      INSERT INTO Container (${containerColumnNames}) 
+      VALUES ${containerVariableValues};
+
+      COMMIT;
+`;
+    console.log(query);
+    let result = await pool.request().query(query);
 
     console.log(result);
   } catch (err) {

@@ -15,15 +15,6 @@ const port = 3000;
 app.use(cors());
 app.use(express.json()); // <==== parse request body as JSON
 
-app.get("/hello", (req, res) => {
-  testSQL();
-  res.send("Hello World, Will edited this!");
-});
-
-app.get("/goodbye", (req, res) => {
-  res.status(404).send("Goodbye World!");
-});
-
 app.post("/submitWeights", (req, res) => {
   console.log(req.body);
   insertWeight(req.body);
