@@ -1,19 +1,21 @@
 export interface InboundRequest {
   location: string;
-  inboundCategory: string;
-  supplier: string;
-  orderNumber: string;
-  paymentMethod: paymentMethodEnum;
+  category: string;
+  supplierOrganisation: string;
+  invoiceNumber?: string;
+  paymentMethod: string;
   amount: number;
-  advertisedLVEvent: boolean;
-  contact: string;
-  notes: string;
-  postcode: string;
-  LVTransportRequired: boolean;
-  expectedDeliveryDate: string;
-  thankYouSent: boolean;
-  thankYouInitial: string;
-  usagePlan: string;
+  description?: string;
+  advertisedLvEvent: "Y" | "N";
+  contact?: string;
+  notes?: string;
+  postcode?: string;
+  lvTransportReq: "Y" | "N";
+  expDeliveryDate?: string;
+  thankyouSent: "Y" | "N";
+  thankyouInitial?: string;
+  usagePlan?: string;
+  tags: { name: string }[];
 }
 
 export const locations = [
@@ -27,10 +29,10 @@ export const locations = [
   "Other",
 ];
 
-export enum paymentMethodEnum {
-  Invoice = "Invoice",
-  Card = "Card",
-  Cash = "Cash",
-  Equals = "Equals",
-  Other = "Other",
-}
+export const paymentMethodEnum = {
+  Invoice: "Invoice",
+  Card: "Card",
+  Cash: "Cash",
+  Equals: "Equals",
+  Other: "Other",
+};

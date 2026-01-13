@@ -1,40 +1,43 @@
 "use client";
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import Button from "@/components/button";
 import { weightCategories } from "@/constants/weightCatagories";
 import { ContainerType } from "@/interfaces/containerInterface";
-import { locationEnum, locations } from "@/interfaces/inboundRequest";
+import {
+  InboundRequest,
+  locations,
+  paymentMethodEnum,
+} from "@/interfaces/inboundRequest";
+import { getTags } from "@/services/tagsService";
+import { useRouter } from "next/navigation";
+import {
+  getInboundRequests,
+  getOutboundRequests,
+  postWeightRecord,
+} from "@/services/boundService";
+import { OutboundRequest } from "@/interfaces/outboundRequest";
 
 export default function CreateWeight() {
+  const router = useRouter();
+
   const [weight, setWeight] = useState("");
   const [unit, setUnit] = useState("kg");
   const [childName, setChildName] = useState("");
   const [date, setDate] = useState("");
   const [ageGroup, setAgeGroup] = useState(weightCategories[0]);
-  const [itemType, setItemType] = useState("clothes");
+  // containers: array of container type names
   const [containers, setContainers] = useState<string[]>([""]);
+  // grossWeights: array of grossWeight values for each container
+  const [grossWeights, setGrossWeights] = useState<string[]>([""]);
 
   // Request section state
   const [requestType, setRequestType] = useState<
     "none" | "inbound" | "outbound"
   >("none");
 
-  // Inbound request state
-  const [inboundType, setInboundType] = useState("");
-  const [inboundNotes, setInboundNotes] = useState("");
-  const [inboundUrgency, setInboundUrgency] = useState("normal");
-  const [inboundDate, setInboundDate] = useState("");
-  const [inboundContact, setInboundContact] = useState("");
-  const [inboundLocation, setInboundLocation] = useState("");
-  const [inboundSupplier, setInboundSupplier] = useState("");
-
-  // Outbound request state
-  const [outboundType, setOutboundType] = useState("");
-  const [outboundNotes, setOutboundNotes] = useState("");
-  const [outboundUrgency, setOutboundUrgency] = useState("normal");
-  const [outboundDate, setOutboundDate] = useState("");
-  const [outboundDriver, setOutboundDriver] = useState("");
-  const [outboundDestination, setOutboundDestination] = useState("");
+  const [inbounds, setInbounds] = useState<InboundRequest[]>([]);
+  const [outbounds, setOutbounds] = useState<OutboundRequest[]>([]);
+  const [attachId, setAttachId] = useState<number | null>(null);
 
   const handleContainerChange = (idx: number, value: string) => {
     const updated = [...containers];
@@ -42,138 +45,260 @@ export default function CreateWeight() {
     setContainers(updated);
   };
 
+  const handleGrossWeightChange = (idx: number, value: string) => {
+    const updated = [...grossWeights];
+    updated[idx] = value;
+    setGrossWeights(updated);
+  };
+
   const addContainer = () => {
     setContainers([...containers, ""]);
+    setGrossWeights([...grossWeights, ""]);
   };
 
   const removeContainer = (idx: number) => {
     setContainers(containers.filter((_, i) => i !== idx));
+    setGrossWeights(grossWeights.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    let requestDetails = "";
-    if (requestType === "inbound") {
-      requestDetails = `\n--- Inbound Request ---\nType: ${inboundType}\nNotes: ${inboundNotes}\nUrgency: ${inboundUrgency}\nDate Needed: ${inboundDate}\nContact: ${inboundContact}\nLocation: ${inboundLocation}`;
-    } else if (requestType === "outbound") {
-      requestDetails = `\n--- Outbound Request ---\nType: ${outboundType}\nNotes: ${outboundNotes}\nUrgency: ${outboundUrgency}\nDate Needed: ${outboundDate}\nDriver: ${outboundDriver}\nDestination: ${outboundDestination}`;
+  console.log(containers, "containers");
+
+  const buildContainersPayload = () => {
+    // Only include containers with a type selected
+    return containers
+      .map((containerType, idx) => {
+        if (!containerType) return null;
+        const containerObj =
+          ContainerType[containerType as keyof typeof ContainerType];
+        return {
+          typeId: containerObj?.id || containerType,
+          grossWeight: Number(grossWeights[idx]) || 0,
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const buildRequestBody = () => {
+    console.log(buildContainersPayload(), "containers payload");
+    const baseBody = {
+      category: ageGroup,
+      name: childName,
+      containers: buildContainersPayload(),
+      entryDate: date,
+    };
+
+    // Conditionally attach request ID
+    if (attachId !== null) {
+      if (requestType === "inbound") {
+        return {
+          ...baseBody,
+          inboundId: String(attachId),
+        };
+      }
+
+      if (requestType === "outbound") {
+        return {
+          ...baseBody,
+          outboundId: String(attachId),
+        };
+      }
     }
-    alert(
-      `Weight: ${weight} ${unit}\nChild Name: ${childName}\nDate: ${date}\nCategory: ${ageGroup}\nItem Type: ${itemType}\nContainers: ${containers
-        .filter(Boolean)
-        .join(", ")}${requestDetails}`
-    );
-    // Add your submit logic here
+
+    // No attachment
+    return baseBody;
+  };
+
+  const fetchInbounds = async () => {
+    try {
+      const response = await getInboundRequests();
+      setInbounds(response);
+      console.log("Inbounds:", response);
+    } catch (error) {
+      console.error("Error fetching inbounds:", error);
+    }
+  };
+
+  const fetchOutbounds = async () => {
+    try {
+      const response = await getOutboundRequests();
+      setOutbounds(response);
+      console.log("Outbounds:", response);
+    } catch (error) {
+      console.error("Error fetching outbounds:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchInbounds();
+    fetchOutbounds();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const requestBody = buildRequestBody();
+
+    console.log("Submitting weight record:", requestBody);
+
+    await postWeightRecord(requestBody);
+
+    router.back();
   };
 
   return (
     <div style={styles.container as React.CSSProperties}>
       <main style={styles.main as React.CSSProperties}>
-        <h1 style={styles.header as React.CSSProperties}>
-          Create Weight Record
-        </h1>
+        {/* Back */}
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={styles.backButton as React.CSSProperties}
+        >
+          ← Back
+        </button>
+
+        <div style={styles.headerWrap as React.CSSProperties}>
+          <h1 style={styles.header as React.CSSProperties}>
+            Create Weight Record
+          </h1>
+          <p style={styles.subheader as React.CSSProperties}>
+            A small record that helps us understand what’s coming in and where
+            it needs to go.
+          </p>
+        </div>
+
         <form
           onSubmit={handleSubmit}
           style={styles.form as React.CSSProperties}
         >
-          <label style={styles.label as React.CSSProperties}>
-            Name
-            <input
-              type="text"
-              value={childName}
-              onChange={(e) => setChildName(e.target.value)}
-              placeholder="Enter name"
-              style={styles.input as React.CSSProperties}
-              required
-            />
-          </label>
-          <label style={styles.label as React.CSSProperties}>
-            Date
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              style={styles.input as React.CSSProperties}
-              required
-            />
-          </label>
-          <label style={styles.label as React.CSSProperties}>
-            Category
-            <select
-              value={ageGroup}
-              onChange={(e) => setAgeGroup(e.target.value)}
-              style={styles.select as React.CSSProperties}
-              required
-            >
-              {weightCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={styles.label as React.CSSProperties}>
-            Containers
-            {containers.map((container, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  marginBottom: "0.5rem",
-                }}
-              >
+          {/* Weight record section */}
+          <div style={styles.sectionCard as React.CSSProperties}>
+            <h3 style={styles.sectionTitle as React.CSSProperties}>
+              Weight Record
+            </h3>
+
+            <label style={styles.label as React.CSSProperties}>
+              Name
+              <input
+                type="text"
+                value={childName}
+                onChange={(e) => setChildName(e.target.value)}
+                placeholder="Enter name"
+                style={styles.input as React.CSSProperties}
+                required
+              />
+            </label>
+
+            <div style={styles.row2 as React.CSSProperties}>
+              <label style={styles.label as React.CSSProperties}>
+                Date
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  style={styles.input as React.CSSProperties}
+                  required
+                />
+              </label>
+
+              <label style={styles.label as React.CSSProperties}>
+                Category
                 <select
-                  value={container}
-                  onChange={(e) => handleContainerChange(idx, e.target.value)}
+                  value={ageGroup}
+                  onChange={(e) => setAgeGroup(e.target.value)}
                   style={styles.select as React.CSSProperties}
                   required
                 >
-                  <option value="">Select container type</option>
-                  {Object.values(ContainerType).map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  {weightCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
                     </option>
                   ))}
                 </select>
-                {containers.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeContainer(idx)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#ef4444",
-                      fontSize: "1.5rem",
-                      cursor: "pointer",
-                      lineHeight: 1,
-                    }}
-                    aria-label="Remove container"
+              </label>
+            </div>
+
+            <label style={styles.label as React.CSSProperties}>
+              Containers
+              {containers.map((container, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <select
+                    value={container}
+                    onChange={(e) => handleContainerChange(idx, e.target.value)}
+                    style={styles.select as React.CSSProperties}
+                    required
                   >
-                    &minus;
-                  </button>
-                )}
-                {idx === containers.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={addContainer}
+                    <option value="">Select container type</option>
+                    {Object.values(ContainerType).map((typeObj) => (
+                      <option key={typeObj.name} value={typeObj.name}>
+                        {typeObj.name} ({typeObj.weight}kg)
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="Gross Weight"
+                    value={grossWeights[idx] || ""}
+                    onChange={(e) =>
+                      handleGrossWeightChange(idx, e.target.value)
+                    }
                     style={{
-                      background: "none",
-                      border: "none",
-                      color: "#2563eb",
-                      fontSize: "1.5rem",
-                      cursor: "pointer",
-                      lineHeight: 1,
+                      ...styles.input,
+                      width: "120px",
                     }}
-                    aria-label="Add container"
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-            ))}
-          </label>
+                    required
+                  />
+
+                  {containers.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeContainer(idx)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#ef4444",
+                        fontSize: "1.5rem",
+                        cursor: "pointer",
+                        lineHeight: 1,
+                      }}
+                      aria-label="Remove container"
+                    >
+                      &minus;
+                    </button>
+                  )}
+
+                  {idx === containers.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={addContainer}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#2563eb",
+                        fontSize: "1.5rem",
+                        cursor: "pointer",
+                        lineHeight: 1,
+                      }}
+                      aria-label="Add container"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              ))}
+            </label>
+          </div>
 
           {/* Collapsible Request Section */}
           <div style={{ margin: "2rem 0" }}>
@@ -203,9 +328,10 @@ export default function CreateWeight() {
                 }}
               >
                 {requestType === "inbound"
-                  ? "Remove Inbound Request"
-                  : "Add Inbound Request"}
+                  ? "Attach Inbound Request"
+                  : "Attach Inbound Request"}
               </button>
+
               <button
                 type="button"
                 onClick={() =>
@@ -227,199 +353,151 @@ export default function CreateWeight() {
                 }}
               >
                 {requestType === "outbound"
-                  ? "Remove Outbound Request"
-                  : "Add Outbound Request"}
+                  ? "Attach Outbound Request"
+                  : "Attach Outbound Request"}
               </button>
             </div>
-            {requestType === "inbound" && (
+
+            {/* Show inbound list if Attach Inbound Request is active */}
+            {requestType === "inbound" && inbounds.length > 0 && (
               <div
                 style={{
                   background: "#e0f2fe",
-                  border: "2px solid #38bdf8",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
+                  border: "1px solid #38bdf8",
+                  borderRadius: "10px",
+                  padding: "1rem",
                   marginTop: "1rem",
-                  marginBottom: "2rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
                 }}
               >
-                <h3 style={{ color: "#2563eb", margin: 0 }}>Inbound Request</h3>
-                <label style={styles.label as React.CSSProperties}>
-                  Location
-                  <select
-                    value={ageGroup}
-                    onChange={(e) => setAgeGroup(e.target.value)}
-                    style={styles.select as React.CSSProperties}
-                    required
-                  >
-                    {locations.map((location) => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Supplier
-                  <input
-                    type="text"
-                    value={inboundSupplier}
-                    onChange={(e) => setInboundSupplier(e.target.value)}
-                    placeholder="Enter Supplier Name"
-                    style={styles.input as React.CSSProperties}
-                    required
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Contact Name
-                  <input
-                    type="text"
-                    value={inboundContact}
-                    onChange={(e) => setInboundContact(e.target.value)}
-                    placeholder="Contact for inbound"
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Location
-                  <input
-                    type="text"
-                    value={inboundLocation}
-                    onChange={(e) => setInboundLocation(e.target.value)}
-                    placeholder="Inbound location"
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Notes
-                  <textarea
-                    value={inboundNotes}
-                    onChange={(e) => setInboundNotes(e.target.value)}
-                    placeholder="Enter any notes"
-                    style={
-                      {
-                        ...styles.input,
-                        minHeight: "60px",
-                        resize: "vertical",
-                      } as React.CSSProperties
-                    }
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Urgency
-                  <select
-                    value={inboundUrgency}
-                    onChange={(e) => setInboundUrgency(e.target.value)}
-                    style={styles.select as React.CSSProperties}
-                  >
-                    <option value="low">Low</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                  </select>
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Date Needed
-                  <input
-                    type="date"
-                    value={inboundDate}
-                    onChange={(e) => setInboundDate(e.target.value)}
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: "0.75rem",
+                    color: "#2563eb",
+                  }}
+                >
+                  Available Inbound Requests
+                </h4>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {inbounds.map((inb) => (
+                    <li
+                      key={inb.id}
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #bae6fd",
+                        borderRadius: "8px",
+                        marginBottom: "0.75rem",
+                        padding: "0.75rem 1rem",
+                        boxShadow: "0 2px 8px rgba(56,189,248,0.06)",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: "#2563eb" }}>
+                        {inb.location} &mdash; {inb.category}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.97em",
+                          color: "#374151",
+                          margin: "0.25rem 0",
+                        }}
+                      >
+                        <span>Supplier: {inb.supplierOrganisation}</span> |{" "}
+                        <span>Contact: {inb.contact}</span>
+                      </div>
+                      <div style={{ fontSize: "0.97em", color: "#374151" }}>
+                        <span>
+                          Delivery:{" "}
+                          {inb.expDeliveryDate
+                            ? new Date(inb.expDeliveryDate).toLocaleDateString()
+                            : "-"}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.97em",
+                          color: "#374151",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        <span>Notes: {inb.notes}</span>
+                      </div>
+                      <div style={{ fontSize: "0.97em", color: "#374151" }}>
+                        <span>Usage Plan: {inb.usagePlan}</span>
+                      </div>
+                      <div style={{ fontSize: "0.97em", color: "#374151" }}>
+                        <span>Description: {inb.description}</span>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <Button
+                          variant="danger"
+                          onClick={() => setAttachId(inb.id)}
+                        >
+                          Attach
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
-            {requestType === "outbound" && (
+            {/* Show outbound list if Attach Outbound Request is active */}
+            {requestType === "outbound" && outbounds.length > 0 && (
               <div
                 style={{
                   background: "#fef9c3",
-                  border: "2px solid #fde047",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
+                  border: "1px solid #fde047",
+                  borderRadius: "10px",
+                  padding: "1rem",
                   marginTop: "1rem",
-                  marginBottom: "2rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
                 }}
               >
-                <h3 style={{ color: "#b45309", margin: 0 }}>
-                  Outbound Request
-                </h3>
-                <label style={styles.label as React.CSSProperties}>
-                  Request Type
-                  <select
-                    value={outboundType}
-                    onChange={(e) => setOutboundType(e.target.value)}
-                    style={styles.select as React.CSSProperties}
-                    required
-                  >
-                    <option value="">Select type</option>
-                    <option value="delivery">Delivery</option>
-                    <option value="collection">Collection</option>
-                    <option value="transfer">Transfer</option>
-                  </select>
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Driver Name
-                  <input
-                    type="text"
-                    value={outboundDriver}
-                    onChange={(e) => setOutboundDriver(e.target.value)}
-                    placeholder="Driver for outbound"
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Destination
-                  <input
-                    type="text"
-                    value={outboundDestination}
-                    onChange={(e) => setOutboundDestination(e.target.value)}
-                    placeholder="Outbound destination"
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Notes
-                  <textarea
-                    value={outboundNotes}
-                    onChange={(e) => setOutboundNotes(e.target.value)}
-                    placeholder="Enter any notes"
-                    style={
-                      {
-                        ...styles.input,
-                        minHeight: "60px",
-                        resize: "vertical",
-                      } as React.CSSProperties
-                    }
-                  />
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Urgency
-                  <select
-                    value={outboundUrgency}
-                    onChange={(e) => setOutboundUrgency(e.target.value)}
-                    style={styles.select as React.CSSProperties}
-                  >
-                    <option value="low">Low</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                  </select>
-                </label>
-                <label style={styles.label as React.CSSProperties}>
-                  Date Needed
-                  <input
-                    type="date"
-                    value={outboundDate}
-                    onChange={(e) => setOutboundDate(e.target.value)}
-                    style={styles.input as React.CSSProperties}
-                  />
-                </label>
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: "0.75rem",
+                    color: "#b45309",
+                  }}
+                >
+                  Available Outbound Requests
+                </h4>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {outbounds.map((outb) => (
+                    <li
+                      key={outb.id}
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #fde68a",
+                        borderRadius: "8px",
+                        marginBottom: "0.75rem",
+                        padding: "0.75rem 1rem",
+                        boxShadow: "0 2px 8px rgba(253,230,138,0.06)",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: "#b45309" }}>
+                        {outb.location} &mdash; {outb.category}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.97em",
+                          color: "#374151",
+                          margin: "0.25rem 0",
+                        }}
+                      >
+                        <span>Organisation: {outb.organisation}</span> |{" "}
+                        <span>Contact: {outb.contact}</span>
+                      </div>
+                      <div style={{ fontSize: "0.97em", color: "#374151" }}>
+                        <span>
+                          Completed: {outb.completed === "Y" ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
+
           <Button type="submit">Submit</Button>
         </form>
       </main>
@@ -428,32 +506,84 @@ export default function CreateWeight() {
 }
 
 const styles = {
+  // Warmer, calmer "Little Village" vibe background
   container: {
     minHeight: "100vh",
-    background: "#f7fafc",
+    background: "#f7faf5",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "flex-start",
+    padding: "2rem 1rem",
   },
+
+  // Main card feels friendly, not "admin"
   main: {
     background: "#fff",
-    padding: "2rem 2.5rem",
-    borderRadius: "16px",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-    minWidth: "320px",
+    padding: "2.25rem 2.25rem",
+    borderRadius: "18px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+    width: "100%",
+    maxWidth: "720px",
   },
+
+  backButton: {
+    background: "transparent",
+    border: "none",
+    color: "#6b7280",
+    cursor: "pointer",
+    fontSize: "0.95rem",
+    padding: 0,
+    marginBottom: "1rem",
+  },
+
+  headerWrap: {
+    textAlign: "center",
+    marginBottom: "1.5rem",
+  },
+
   header: {
     fontSize: "2rem",
     fontWeight: 600,
-    color: "#2563eb",
-    marginBottom: "1.5rem",
-    textAlign: "center",
+    color: "#2f3e2f",
+    margin: 0,
   },
+
+  subheader: {
+    marginTop: "0.75rem",
+    marginBottom: 0,
+    color: "#6b7b6b",
+    fontSize: "0.95rem",
+    lineHeight: 1.5,
+  },
+
   form: {
     display: "flex",
     flexDirection: "column",
     gap: "1.25rem",
   },
+
+  // Only used for the top "Weight Record" grouping — does not change your inner field styles
+  sectionCard: {
+    background: "#ffffff",
+    border: "1px solid #eef2f7",
+    borderRadius: "14px",
+    padding: "1.25rem",
+  },
+
+  sectionTitle: {
+    margin: 0,
+    marginBottom: "1rem",
+    color: "#374151",
+    fontSize: "1.05rem",
+    fontWeight: 600,
+  },
+
+  row2: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "1rem",
+  },
+
   label: {
     fontWeight: 500,
     color: "#222",
@@ -461,12 +591,14 @@ const styles = {
     flexDirection: "column",
     gap: "0.5rem",
   },
+
   input: {
     padding: "0.5rem 0.75rem",
     borderRadius: "8px",
     border: "1px solid #d1d5db",
     fontSize: "1rem",
   },
+
   select: {
     padding: "0.5rem 0.75rem",
     borderRadius: "8px",

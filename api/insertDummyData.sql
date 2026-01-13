@@ -1,8 +1,18 @@
 BEGIN TRANSACTION;
 
 -- Insert into ContainerTypes
-INSERT INTO ContainerTypes (containerName, weight) VALUES ('Box', 5);
-INSERT INTO ContainerTypes (containerName, weight) VALUES ('Crate', 10);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Jumbo Cage', 44.5);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Jumbo Cage No Door', 37.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Square Cage', 57.3);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Slim Cage', 43.3);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Tall Cage', 50.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Normal size - Clear Pallet', 16.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Normal size - Blue Pallet', 23.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Color Bucket', 13.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Black Bucket', 17.5);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('Recycling Cage', 39.5);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('New Jumbo Cage', 67.0);
+INSERT INTO ContainerTypes (containerName, weight) VALUES ('None', 0.0);
 
 -- Insert into Inbound
 DECLARE @inbound1Id INT;
