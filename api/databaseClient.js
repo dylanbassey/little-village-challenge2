@@ -50,7 +50,7 @@ async function getOrderTypes() {
   try {
     console.log("Getting Order Types from DB...");
     let pool = await sql.connect(sqlConfig);
-    let result = await pool.query(`SELECT name FROM Tags;`);
+    let result = await pool.query(`SELECT name FROM items;`);
 
     console.log(result.recordset);
     return result.recordset;
@@ -139,20 +139,199 @@ async function insertWeight(record) {
       INSERT INTO Container (${containerColumnNames}) 
       VALUES ${containerVariableValues};
 
+      SELECT * FROM WeightRecord WHERE id=@wr1ID;
       COMMIT;
-`;
+      `;
+
     console.log(query);
-    let result = await pool.request().query(query);
+    let result = await pool.query(query);
 
     console.log(result);
+    console.log(result.recordset);
+    console.log(`result: ${result.recordset}`);
+    return result.recordset[0];
   } catch (err) {
     throw err;
   }
 }
 
-async function insertInboundOrder(record) {}
+async function insertInboundOrder(record) {
+  try {
+    let columnNames = "";
+    let variableNames = "";
 
-async function insertOutboundOrder(record) {}
+    let tags = [];
+
+    for (let attributename in record) {
+      if (attributename == "tags") {
+        tags = record[attributename];
+      } else {
+        columnNames += "," + attributename;
+        variableNames += ", '" + record[attributename] + "'";
+      }
+    }
+
+    let tagColumnNames = "parentId";
+    let tagColumnNamesList = [];
+    let tagVariableValues = "";
+
+    //get tag column names
+    for (let attributeName in tags[0]) {
+      tagColumnNames += "," + attributeName;
+      tagColumnNamesList.push(attributeName);
+    }
+
+    console.log(`\nColumn Names: `);
+    for (let i = 0; i < tagColumnNamesList.length; i++) {
+      console.log(tagColumnNamesList[i]);
+    }
+    console.log(tags);
+    console.log("\ntags: \n");
+
+    for (let i = 0; i < tags.length; i++) {
+      let tag = tags[i];
+      console.log(tag);
+
+      let tagColumnValues = "(@wr1Id, ";
+
+      console.log("\nColumn Values: ");
+
+      for (let j = 0; j < tagColumnNamesList.length; j++) {
+        let attributeName = tagColumnNamesList[j];
+        console.log(`${attributeName}: ${tag[attributeName]}`);
+        tagColumnValues += "'" + tag[attributeName] + "',";
+      }
+
+      tagColumnValues = tagColumnValues.substring(
+        0,
+        tagColumnValues.length - 1
+      ); // remove final comma
+      tagColumnValues += "),";
+      tagVariableValues += tagColumnValues;
+    }
+    tagVariableValues = tagVariableValues.substring(
+      0,
+      tagVariableValues.length - 1
+    ); //remove final comma
+
+    columnNames = columnNames.substring(1); //remove initial comma
+    variableNames = variableNames.substring(1); //remove initial comma
+
+    let pool = await sql.connect(sqlConfig);
+
+    let query = `
+    BEGIN TRANSACTION;
+    DECLARE @wr1Id INT;
+
+    INSERT INTO Inbound (${columnNames})
+    VALUES (${variableNames});
+
+    SET @wr1Id = SCOPE_IDENTITY();
+
+    INSERT INTO Tags (${tagColumnNames}) 
+    VALUES ${tagVariableValues};
+
+    SELECT * FROM Inbound WHERE id=@wr1ID;
+    COMMIT;
+`;
+    console.log(query);
+    let result = await pool.query(query);
+
+    console.log(result);
+    return result.recordset[0];
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function insertOutboundOrder(record) {
+  try {
+    let columnNames = "";
+    let variableNames = "";
+
+    let items = [];
+
+    for (let attributename in record) {
+      if (attributename == "items") {
+        items = record[attributename];
+      } else {
+        columnNames += "," + attributename;
+        variableNames += ", '" + record[attributename] + "'";
+      }
+    }
+
+    let itemColumnNames = "parentId";
+    let itemColumnNamesList = [];
+    let itemVariableValues = "";
+
+    //get item column names
+    for (let attributeName in items[0]) {
+      itemColumnNames += "," + attributeName;
+      itemColumnNamesList.push(attributeName);
+    }
+
+    console.log(`\nColumn Names: `);
+    for (let i = 0; i < itemColumnNamesList.length; i++) {
+      console.log(itemColumnNamesList[i]);
+    }
+    console.log(items);
+    console.log("\nitems: \n");
+
+    for (let i = 0; i < items.length; i++) {
+      let item = items[i];
+      console.log(item);
+
+      let itemColumnValues = "(@wr1Id, ";
+
+      console.log("\nColumn Values: ");
+
+      for (let j = 0; j < itemColumnNamesList.length; j++) {
+        let attributeName = itemColumnNamesList[j];
+        console.log(`${attributeName}: ${item[attributeName]}`);
+        itemColumnValues += "'" + item[attributeName] + "',";
+      }
+
+      itemColumnValues = itemColumnValues.substring(
+        0,
+        itemColumnValues.length - 1
+      ); // remove final comma
+      itemColumnValues += "),";
+      itemVariableValues += itemColumnValues;
+    }
+    itemVariableValues = itemVariableValues.substring(
+      0,
+      itemVariableValues.length - 1
+    ); //remove final comma
+
+    columnNames = columnNames.substring(1); //remove initial comma
+    variableNames = variableNames.substring(1); //remove initial comma
+
+    let pool = await sql.connect(sqlConfig);
+
+    let query = `
+    BEGIN TRANSACTION;
+    DECLARE @wr1Id INT;
+
+    INSERT INTO Outbound (${columnNames})
+    VALUES (${variableNames});
+
+    SET @wr1Id = SCOPE_IDENTITY();
+
+    INSERT INTO OutboundItems (${itemColumnNames}) 
+    VALUES ${itemVariableValues};
+
+    SELECT * FROM Outbound WHERE id=@wr1ID;
+    COMMIT;
+`;
+    console.log(query);
+    let result = await pool.query(query);
+
+    console.log(result);
+    return result.recordset[0];
+  } catch (err) {
+    throw err;
+  }
+}
 
 sql.on("error", (err) => {
   // ... error handler
@@ -161,6 +340,8 @@ sql.on("error", (err) => {
 module.exports = {
   testSQL,
   insertWeight,
+  insertInboundOrder,
+  insertOutboundOrder,
   getContainerTypes,
   getInboundOrders,
   getOutboundOrders,

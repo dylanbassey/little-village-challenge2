@@ -8,6 +8,8 @@ const {
   getInboundOrders,
   getOutboundOrders,
   getOrderTypes,
+  insertInboundOrder,
+  insertOutboundOrder,
 } = require("./databaseClient.js");
 
 const app = express();
@@ -15,17 +17,32 @@ const port = 3000;
 app.use(cors());
 app.use(express.json()); // <==== parse request body as JSON
 
-app.post("/submitWeights", (req, res) => {
+app.post("/submitWeights", async (req, res) => {
   console.log(req.body);
-  insertWeight(req.body);
-  res.status(201).send(req.body);
+  try {
+    let result = await insertWeight(req.body);
+    res.status(201).send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
-app.post("/submitInbound", (req, res) => {
-  res.status(201).send(req);
+app.post("/submitInbound", async (req, res) => {
+  try {
+    let result = await insertInboundOrder(req.body);
+    res.status(201).send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
-app.post("/submitOutbound", (req, res) => {
+app.post("/submitOutbound", async (req, res) => {
+  try {
+    let result = await insertOutboundOrder(req.body);
+    res.status(201).send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
   res.status(201).send(req);
 });
 
