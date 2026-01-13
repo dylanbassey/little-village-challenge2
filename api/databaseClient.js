@@ -180,11 +180,19 @@ async function getWeightRecords(dateFrom, available) {
     let result = await request.query(`
       SELECT id, category, name, entryDate,
       (
-          SELECT typeId, grossWeight 
-          FROM Container 
-          WHERE Container.parentId = WeightRecord.id 
+          SELECT typeId, grossWeight, 
+                 (grossWeight - ContainerTypes.weight) AS containerNetWeight
+          FROM Container
+          INNER JOIN ContainerTypes ON Container.typeId = ContainerTypes.id
+          WHERE Container.parentId = WeightRecord.id
           FOR JSON PATH
-      ) AS containers
+      ) AS containers,
+      (
+          SELECT SUM(grossWeight) - SUM(ContainerTypes.weight)
+          FROM Container
+          INNER JOIN ContainerTypes ON Container.typeId = ContainerTypes.id
+          WHERE Container.parentId = WeightRecord.id
+      ) AS netWeight
       FROM WeightRecord
       WHERE entryDate >= @dateFrom -- Filter by entryDate
       ${availabilityFilter}; -- Conditionally include the availability filter
