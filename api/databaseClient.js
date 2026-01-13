@@ -64,7 +64,13 @@ async function getInboundOrders() {
     console.log("Getting inbound orders from DB...");
     let pool = await sql.connect(sqlConfig);
     let result = await pool.query(
-      `SELECT id, location, category, supplierOrganisation, description, contact, notes, usagePlan, expDeliveryDate
+      `SELECT id, location, category, supplierOrganisation, description, contact, notes, usagePlan, expDeliveryDate,
+      (
+          SELECT name 
+          FROM Tags 
+          WHERE Tags.parentId = Inbound.id 
+          FOR JSON PATH
+      ) AS tags
       FROM Inbound
       WHERE NOT EXISTS(
         SELECT 1 
@@ -73,7 +79,15 @@ async function getInboundOrders() {
       );
       `
     );
-    return result.recordset;
+
+    const parsedResult = result.recordset.map((record) => {
+      if (record.tags) {
+        record.tags = JSON.parse(record.tags);
+      }
+      return record;
+    });
+
+    return parsedResult;
   } catch (err) {
     console.log(err);
     throw err;
@@ -85,7 +99,13 @@ async function getOutboundOrders() {
     console.log("Getting outbound orders from DB...");
     let pool = await sql.connect(sqlConfig);
     let result = await pool.query(
-      `SELECT id, location, category, organisation, contact, completed
+      `SELECT id, location, category, organisation, contact, completed,
+      (
+          SELECT category, quantity 
+          FROM Tags 
+          WHERE Tags.parentId = Outbound.id 
+          FOR JSON PATH
+      ) AS OutboundItems
       FROM Outbound
       WHERE NOT EXISTS(
         SELECT 1 
