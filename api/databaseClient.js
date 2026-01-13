@@ -91,7 +91,7 @@ async function getInboundOrders(dateFrom, available) {
       ${availabilityFilter}; -- Conditionally include the availability filter
  ;`
     );
-
+    console.log(result.recordset);
     const parsedResult = result.recordset.map((record) => {
       if (record.tags) {
         record.tags = JSON.parse(record.tags);

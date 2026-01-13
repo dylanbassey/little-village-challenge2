@@ -10,7 +10,12 @@ const {
   getOrderTypes,
   insertInboundOrder,
   insertOutboundOrder,
+  deleteInboundOrder,
+  deleteOutboundOrder,
+  deleteWeightRecord,
 } = require("./databaseClient.js");
+
+const { getDefaultDateFrom } = require("./utility.js");
 
 const app = express();
 const port = 3000;
@@ -48,7 +53,9 @@ app.post("/submitOutbound", async (req, res) => {
 
 app.get("/inbounds", async (req, res) => {
   try {
-    const { dateFrom, available } = req.query; // Extract query parameters
+    let { dateFrom, available } = req.query; // Extract query parameters
+    dateFrom = getDefaultDateFrom(dateFrom);
+
     console.log(`dateFrom: ${dateFrom}, available: ${available}`);
     let result = await getInboundOrders(dateFrom, available); // Pass them as arguments
     res.send(result);
@@ -59,7 +66,9 @@ app.get("/inbounds", async (req, res) => {
 
 app.get("/outbounds", async (req, res) => {
   try {
-    const { dateFrom, available } = req.query; // Extract query parameters
+    let { dateFrom, available } = req.query; // Extract query parameters
+    dateFrom = getDefaultDateFrom(dateFrom);
+
     console.log(`dateFrom: ${dateFrom}, available: ${available}`);
     let result = await getOutboundOrders(dateFrom, available); // Pass them as arguments
     res.send(result);
@@ -70,9 +79,42 @@ app.get("/outbounds", async (req, res) => {
 
 app.get("/weightRecords", async (req, res) => {
   try {
-    const { dateFrom, available } = req.query; // Extract query parameters
+    let { dateFrom, available } = req.query; // Extract query parameters
+    dateFrom = getDefaultDateFrom(dateFrom);
+
     console.log(`dateFrom: ${dateFrom}, available: ${available}`);
     let result = await getWeightRecords(dateFrom, available); // Pass them as arguments
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.delete("/inbound/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // Extract the dynamic 'id' parameter from the URL
+    console.log(`Deleting inbound order with id: ${id}`);
+    let result = await deleteInboundOrder(id); // Pass it as an argument
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.delete("/outbound/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // Extract query parameters
+    let result = await deleteOutboundOrder(id); // Pass them as arguments
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.delete("/weightRecord/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // Extract query parameters
+    let result = await deleteWeightRecord(id); // Pass them as arguments
     res.send(result);
   } catch (err) {
     res.status(500).send(err);
