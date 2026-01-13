@@ -133,7 +133,13 @@ async function getWeightRecords() {
     console.log("Getting weightRecords from DB...");
     let pool = await sql.connect(sqlConfig);
     let result = await pool.query(
-      `SELECT id, category, name, entryDate
+      `SELECT id, category, name, entryDate,
+      (
+          SELECT typeId, grossWeight 
+          FROM Container 
+          WHERE Container.parentId = WeightRecord.id 
+          FOR JSON PATH
+      ) AS containers
       FROM WeightRecord
       WHERE NOT EXISTS(
         SELECT 1 
@@ -148,7 +154,14 @@ async function getWeightRecords() {
         );
       `
     );
-    return result.recordset;
+    const parsedResult = result.recordset.map((record) => {
+      if (record.containers) {
+        record.containers = JSON.parse(record.containers);
+      }
+      return record;
+    });
+
+    return parsedResult;
   } catch (err) {
     console.log(err);
     throw err;
