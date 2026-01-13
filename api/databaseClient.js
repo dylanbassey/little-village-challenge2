@@ -67,6 +67,17 @@ async function getInboundOrders(dateFrom, available) {
 
     // Bind the dateFrom parameter
     request.input("dateFrom", sql.Date, dateFrom);
+
+    let availabilityFilter = "";
+    if (available === "true") {
+      availabilityFilter = `
+      AND NOT EXISTS(
+          SELECT 1 
+          FROM WeightRecord 
+          WHERE WeightRecord.inboundId=Inbound.id
+        )`;
+    }
+
     let result = await request.query(
       `SELECT id, location, category, supplierOrganisation, description, contact, notes, usagePlan, expDeliveryDate,
       (
@@ -77,11 +88,8 @@ async function getInboundOrders(dateFrom, available) {
       ) AS tags
       FROM Inbound
       WHERE expDeliveryDate >= @dateFrom -- Filter by expDeliveryDate
-        AND NOT EXISTS(
-          SELECT 1 
-          FROM WeightRecord 
-          WHERE WeightRecord.inboundId=Inbound.id
-        );`
+      ${availabilityFilter}; -- Conditionally include the availability filter
+ ;`
     );
 
     const parsedResult = result.recordset.map((record) => {
@@ -106,6 +114,16 @@ async function getOutboundOrders(dateFrom, available) {
 
     // Bind the dateFrom parameter
     request.input("dateFrom", sql.Date, dateFrom);
+
+    let availabilityFilter = "";
+    if (available === "true") {
+      availabilityFilter = `
+      AND NOT EXISTS(
+        SELECT 1 
+        FROM WeightRecord 
+        WHERE WeightRecord.outboundId=Outbound.id
+    )`;
+    }
     let result = await request.query(
       `SELECT id, location, category, organisation, contact, completed, estDispatchDate,
       (
@@ -116,12 +134,7 @@ async function getOutboundOrders(dateFrom, available) {
       ) AS outboundItems
       FROM Outbound
       WHERE estDispatchDate >= @dateFrom -- Filter by expDeliveryDate
-
-      AND NOT EXISTS(
-        SELECT 1 
-        FROM WeightRecord 
-        WHERE WeightRecord.outboundId=Outbound.id
-      );
+      ${availabilityFilter}; -- Conditionally include the availability filter
       `
     );
     const parsedResult = result.recordset.map((record) => {
@@ -146,8 +159,26 @@ async function getWeightRecords(dateFrom, available) {
 
     // Bind the dateFrom parameter
     request.input("dateFrom", sql.Date, dateFrom);
-    let result = await request.query(
-      `SELECT id, category, name, entryDate,
+    // Dynamically add the filter based on the `available` variable
+    let availabilityFilter = "";
+    if (available === "true") {
+      availabilityFilter = `
+        AND NOT EXISTS(
+          SELECT 1 
+          FROM Outbound 
+          WHERE Outbound.id = WeightRecord.outboundId
+        )
+        AND NOT EXISTS(
+          SELECT 1 
+          FROM Inbound 
+          WHERE Inbound.id = WeightRecord.inboundId
+        )
+      `;
+    }
+
+    // Construct the query
+    let result = await request.query(`
+      SELECT id, category, name, entryDate,
       (
           SELECT typeId, grossWeight 
           FROM Container 
@@ -155,19 +186,10 @@ async function getWeightRecords(dateFrom, available) {
           FOR JSON PATH
       ) AS containers
       FROM WeightRecord
-      WHERE entryDate >= @dateFrom -- Filter by expDeliveryDate
-      AND NOT EXISTS(
-        SELECT 1 
-        FROM Outbound 
-        WHERE Outbound.id=WeightRecord.outboundId
-      )
-      AND NOT EXISTS(
-        SELECT 1 
-        FROM Inbound 
-        WHERE Inbound.id=WeightRecord.inboundId
-        );
-      `
-    );
+      WHERE entryDate >= @dateFrom -- Filter by entryDate
+      ${availabilityFilter}; -- Conditionally include the availability filter
+    `);
+
     const parsedResult = result.recordset.map((record) => {
       if (record.containers) {
         record.containers = JSON.parse(record.containers);
