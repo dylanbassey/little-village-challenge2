@@ -483,8 +483,19 @@ async function deleteInboundOrder(id) {
 
     // Execute the delete query
     let result = await request.query(`
+      BEGIN TRANSACTION;
+
+      UPDATE WeightRecord
+      SET inboundId = NULL
+      WHERE inboundId = @id;
+
       DELETE FROM Inbound
       WHERE id = @id
+
+      DELETE FROM Tags
+      WHERE parentId = @id;
+
+      COMMIT;
     `);
 
     return result;
@@ -505,8 +516,19 @@ async function deleteOutboundOrder(id) {
 
     // Execute the delete query
     let result = await request.query(`
+      BEGIN TRANSACTION;
+
+      UPDATE WeightRecord
+      SET outboundId = NULL
+      WHERE outboundId = @id;
+      
       DELETE FROM Outbound
       WHERE id = @id
+
+      DELETE FROM OutboundItems
+      WHERE parentId = @id;
+
+      COMMIT;
     `);
 
     return result;
@@ -527,8 +549,15 @@ async function deleteWeightRecord(id) {
 
     // Execute the delete query
     let result = await request.query(`
+      BEGIN TRANSACTION;
+      
+      DELETE FROM Container
+      WHERE parentId = @id;
+
       DELETE FROM WeightRecord
       WHERE id = @id
+
+      COMMIT;
     `);
 
     return result;
