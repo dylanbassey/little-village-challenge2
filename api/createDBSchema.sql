@@ -56,7 +56,7 @@ CREATE TABLE ContainerTypes
 (
     id            INT NOT NULL IDENTITY (1,1),
     containerName VARCHAR(15),
-    weight        INT,
+    weight        DECIMAL(10, 2),
     PRIMARY KEY (id)
 );
 

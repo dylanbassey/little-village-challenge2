@@ -472,6 +472,72 @@ async function insertOutboundOrder(record) {
   }
 }
 
+async function deleteInboundOrder(id) {
+  try {
+    console.log(`Deleting inbound order with id: ${id}`);
+    let pool = await sql.connect(sqlConfig);
+    let request = pool.request();
+
+    // Bind the id parameter
+    request.input("id", sql.Int, id);
+
+    // Execute the delete query
+    let result = await request.query(`
+      DELETE FROM Inbound
+      WHERE id = @id
+    `);
+
+    return result;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+async function deleteOutboundOrder(id) {
+  try {
+    console.log(`Deleting outbound order with id: ${id}`);
+    let pool = await sql.connect(sqlConfig);
+    let request = pool.request();
+
+    // Bind the id parameter
+    request.input("id", sql.Int, id);
+
+    // Execute the delete query
+    let result = await request.query(`
+      DELETE FROM Outbound
+      WHERE id = @id
+    `);
+
+    return result;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+async function deleteWeightRecord(id) {
+  try {
+    console.log(`Deleting weight record with id: ${id}`);
+    let pool = await sql.connect(sqlConfig);
+    let request = pool.request();
+
+    // Bind the id parameter
+    request.input("id", sql.Int, id);
+
+    // Execute the delete query
+    let result = await request.query(`
+      DELETE FROM WeightRecord
+      WHERE id = @id
+    `);
+
+    return result;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 sql.on("error", (err) => {
   // ... error handler
 });
@@ -486,4 +552,7 @@ module.exports = {
   getOutboundOrders,
   getWeightRecords,
   getOrderTypes,
+  deleteInboundOrder,
+  deleteOutboundOrder,
+  deleteWeightRecord,
 };
