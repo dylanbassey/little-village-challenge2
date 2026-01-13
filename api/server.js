@@ -7,6 +7,7 @@ const {
   getContainerTypes,
   getInboundOrders,
   getOutboundOrders,
+  getWeightRecords,
   getOrderTypes,
   insertInboundOrder,
   insertOutboundOrder,
@@ -58,6 +59,15 @@ app.get("/inbounds", async (req, res) => {
 app.get("/outbounds", async (req, res) => {
   try {
     let result = await getOutboundOrders();
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/weightRecords", async (req, res) => {
+  try {
+    let result = await getWeightRecords();
     res.send(result);
   } catch (err) {
     res.status(500).send(err);

@@ -101,7 +101,32 @@ async function getOutboundOrders() {
   }
 }
 
-async function getWeights() {}
+async function getWeightRecords() {
+  try {
+    console.log("Getting weightRecords from DB...");
+    let pool = await sql.connect(sqlConfig);
+    let result = await pool.query(
+      `SELECT id, category, name, entryDate
+      FROM WeightRecord
+      WHERE NOT EXISTS(
+        SELECT 1 
+        FROM Outbound 
+        WHERE Outbound.id=WeightRecord.outboundId
+      )
+        AND
+        NOT EXISTS(
+        SELECT 1 
+        FROM Inbound 
+        WHERE Inbound.id=WeightRecord.inboundId
+        );
+      `
+    );
+    return result.recordset;
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+}
 
 async function insertWeight(record) {
   try {
@@ -383,5 +408,6 @@ module.exports = {
   getContainerTypes,
   getInboundOrders,
   getOutboundOrders,
+  getWeightRecords,
   getOrderTypes,
 };
