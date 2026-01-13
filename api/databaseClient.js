@@ -489,11 +489,11 @@ async function deleteInboundOrder(id) {
       SET inboundId = NULL
       WHERE inboundId = @id;
 
-      DELETE FROM Inbound
-      WHERE id = @id
-
       DELETE FROM Tags
       WHERE parentId = @id;
+
+      DELETE FROM Inbound
+      WHERE id = @id;
 
       COMMIT;
     `);
@@ -522,11 +522,11 @@ async function deleteOutboundOrder(id) {
       SET outboundId = NULL
       WHERE outboundId = @id;
       
-      DELETE FROM Outbound
-      WHERE id = @id
-
       DELETE FROM OutboundItems
       WHERE parentId = @id;
+      
+      DELETE FROM Outbound
+      WHERE id = @id;
 
       COMMIT;
     `);
@@ -555,7 +555,7 @@ async function deleteWeightRecord(id) {
       WHERE parentId = @id;
 
       DELETE FROM WeightRecord
-      WHERE id = @id
+      WHERE id = @id;
 
       COMMIT;
     `);
