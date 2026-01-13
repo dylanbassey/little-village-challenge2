@@ -46,12 +46,22 @@ app.post("/submitOutbound", async (req, res) => {
   res.status(201).send(req);
 });
 
-app.get("/inbounds", (req, res) => {
-  res.send(getInboundOrders());
+app.get("/inbounds", async (req, res) => {
+  try {
+    let result = await getInboundOrders();
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
-app.get("/outbounds", (req, res) => {
-  res.send(getOutboundOrders());
+app.get("/outbounds", async (req, res) => {
+  try {
+    let result = await getOutboundOrders();
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
 app.get("/containerTypes", async (req, res) => {

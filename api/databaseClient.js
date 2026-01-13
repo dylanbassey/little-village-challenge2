@@ -59,9 +59,49 @@ async function getOrderTypes() {
   }
 }
 
-async function getInboundOrders() {}
+async function getInboundOrders() {
+  try {
+    console.log("Getting inbound orders from DB...");
+    let pool = await sql.connect(sqlConfig);
+    let result = await pool.query(
+      `SELECT id, location, category, supplierOrganisation, description, contact, notes, usagePlan, expDeliveryDate
+      FROM Inbound
+      WHERE NOT EXISTS(
+        SELECT 1 
+        FROM WeightRecord 
+        WHERE WeightRecord.inboundId=Inbound.id
+      );
+      `
+    );
+    return result.recordset;
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+}
 
-async function getOutboundOrders() {}
+async function getOutboundOrders() {
+  try {
+    console.log("Getting outbound orders from DB...");
+    let pool = await sql.connect(sqlConfig);
+    let result = await pool.query(
+      `SELECT id, location, category, organisation, contact, completed
+      FROM Outbound
+      WHERE NOT EXISTS(
+        SELECT 1 
+        FROM WeightRecord 
+        WHERE WeightRecord.outboundId=Outbound.id
+      );
+      `
+    );
+    return result.recordset;
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+}
+
+async function getWeights() {}
 
 async function insertWeight(record) {
   try {
@@ -154,7 +194,6 @@ async function insertWeight(record) {
     throw err;
   }
 }
-
 async function insertInboundOrder(record) {
   try {
     let columnNames = "";
@@ -243,7 +282,6 @@ async function insertInboundOrder(record) {
     throw err;
   }
 }
-
 async function insertOutboundOrder(record) {
   try {
     let columnNames = "";
