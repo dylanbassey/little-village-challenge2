@@ -102,10 +102,10 @@ async function getOutboundOrders() {
       `SELECT id, location, category, organisation, contact, completed,
       (
           SELECT category, quantity 
-          FROM Tags 
-          WHERE Tags.parentId = Outbound.id 
+          FROM OutboundItems 
+          WHERE OutboundItems.parentId = Outbound.id 
           FOR JSON PATH
-      ) AS OutboundItems
+      ) AS outboundItems
       FROM Outbound
       WHERE NOT EXISTS(
         SELECT 1 
@@ -114,7 +114,14 @@ async function getOutboundOrders() {
       );
       `
     );
-    return result.recordset;
+    const parsedResult = result.recordset.map((record) => {
+      if (record.outboundItems) {
+        record.outboundItems = JSON.parse(record.outboundItems);
+      }
+      return record;
+    });
+
+    return parsedResult;
   } catch (err) {
     console.log(err);
     throw err;
