@@ -59,11 +59,15 @@ async function getOrderTypes() {
   }
 }
 
-async function getInboundOrders() {
+async function getInboundOrders(dateFrom, available) {
   try {
     console.log("Getting inbound orders from DB...");
     let pool = await sql.connect(sqlConfig);
-    let result = await pool.query(
+    let request = pool.request();
+
+    // Bind the dateFrom parameter
+    request.input("dateFrom", sql.Date, dateFrom);
+    let result = await request.query(
       `SELECT id, location, category, supplierOrganisation, description, contact, notes, usagePlan, expDeliveryDate,
       (
           SELECT name 
@@ -72,12 +76,12 @@ async function getInboundOrders() {
           FOR JSON PATH
       ) AS tags
       FROM Inbound
-      WHERE NOT EXISTS(
-        SELECT 1 
-        FROM WeightRecord 
-        WHERE WeightRecord.inboundId=Inbound.id
-      );
-      `
+      WHERE expDeliveryDate >= @dateFrom -- Filter by expDeliveryDate
+        AND NOT EXISTS(
+          SELECT 1 
+          FROM WeightRecord 
+          WHERE WeightRecord.inboundId=Inbound.id
+        );`
     );
 
     const parsedResult = result.recordset.map((record) => {
@@ -94,12 +98,16 @@ async function getInboundOrders() {
   }
 }
 
-async function getOutboundOrders() {
+async function getOutboundOrders(dateFrom, available) {
   try {
     console.log("Getting outbound orders from DB...");
     let pool = await sql.connect(sqlConfig);
-    let result = await pool.query(
-      `SELECT id, location, category, organisation, contact, completed,
+    let request = pool.request();
+
+    // Bind the dateFrom parameter
+    request.input("dateFrom", sql.Date, dateFrom);
+    let result = await request.query(
+      `SELECT id, location, category, organisation, contact, completed, estDispatchDate,
       (
           SELECT category, quantity 
           FROM OutboundItems 
@@ -107,7 +115,9 @@ async function getOutboundOrders() {
           FOR JSON PATH
       ) AS outboundItems
       FROM Outbound
-      WHERE NOT EXISTS(
+      WHERE estDispatchDate >= @dateFrom -- Filter by expDeliveryDate
+
+      AND NOT EXISTS(
         SELECT 1 
         FROM WeightRecord 
         WHERE WeightRecord.outboundId=Outbound.id
@@ -128,11 +138,15 @@ async function getOutboundOrders() {
   }
 }
 
-async function getWeightRecords() {
+async function getWeightRecords(dateFrom, available) {
   try {
     console.log("Getting weightRecords from DB...");
     let pool = await sql.connect(sqlConfig);
-    let result = await pool.query(
+    let request = pool.request();
+
+    // Bind the dateFrom parameter
+    request.input("dateFrom", sql.Date, dateFrom);
+    let result = await request.query(
       `SELECT id, category, name, entryDate,
       (
           SELECT typeId, grossWeight 
@@ -141,13 +155,13 @@ async function getWeightRecords() {
           FOR JSON PATH
       ) AS containers
       FROM WeightRecord
-      WHERE NOT EXISTS(
+      WHERE entryDate >= @dateFrom -- Filter by expDeliveryDate
+      AND NOT EXISTS(
         SELECT 1 
         FROM Outbound 
         WHERE Outbound.id=WeightRecord.outboundId
       )
-        AND
-        NOT EXISTS(
+      AND NOT EXISTS(
         SELECT 1 
         FROM Inbound 
         WHERE Inbound.id=WeightRecord.inboundId

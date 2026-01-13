@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 
 const {
-  testSQL,
   insertWeight,
   getContainerTypes,
   getInboundOrders,
@@ -49,7 +48,9 @@ app.post("/submitOutbound", async (req, res) => {
 
 app.get("/inbounds", async (req, res) => {
   try {
-    let result = await getInboundOrders();
+    const { dateFrom, available } = req.query; // Extract query parameters
+    console.log(`dateFrom: ${dateFrom}, available: ${available}`);
+    let result = await getInboundOrders(dateFrom, available); // Pass them as arguments
     res.send(result);
   } catch (err) {
     res.status(500).send(err);
@@ -58,7 +59,9 @@ app.get("/inbounds", async (req, res) => {
 
 app.get("/outbounds", async (req, res) => {
   try {
-    let result = await getOutboundOrders();
+    const { dateFrom, available } = req.query; // Extract query parameters
+    console.log(`dateFrom: ${dateFrom}, available: ${available}`);
+    let result = await getOutboundOrders(dateFrom, available); // Pass them as arguments
     res.send(result);
   } catch (err) {
     res.status(500).send(err);
@@ -67,7 +70,9 @@ app.get("/outbounds", async (req, res) => {
 
 app.get("/weightRecords", async (req, res) => {
   try {
-    let result = await getWeightRecords();
+    const { dateFrom, available } = req.query; // Extract query parameters
+    console.log(`dateFrom: ${dateFrom}, available: ${available}`);
+    let result = await getWeightRecords(dateFrom, available); // Pass them as arguments
     res.send(result);
   } catch (err) {
     res.status(500).send(err);
