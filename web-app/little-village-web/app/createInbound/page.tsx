@@ -62,6 +62,7 @@ export default function CreateInbound() {
 
     try {
       await postInboundRequest(payload);
+      router.back();
       console.log("Inbound request submitted successfully");
     } catch (error) {
       console.error("Failed to submit inbound request", error);

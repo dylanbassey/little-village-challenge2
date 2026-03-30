@@ -25,12 +25,9 @@ export default function CreateWeight() {
   const [childName, setChildName] = useState("");
   const [date, setDate] = useState("");
   const [ageGroup, setAgeGroup] = useState(weightCategories[0]);
-  // containers: array of container type names
   const [containers, setContainers] = useState<string[]>([""]);
-  // grossWeights: array of grossWeight values for each container
   const [grossWeights, setGrossWeights] = useState<string[]>([""]);
 
-  // Request section state
   const [requestType, setRequestType] = useState<
     "none" | "inbound" | "outbound"
   >("none");
@@ -61,10 +58,7 @@ export default function CreateWeight() {
     setGrossWeights(grossWeights.filter((_, i) => i !== idx));
   };
 
-  console.log(containers, "containers");
-
   const buildContainersPayload = () => {
-    // Only include containers with a type selected
     return containers
       .map((containerType, idx) => {
         if (!containerType) return null;
@@ -87,7 +81,6 @@ export default function CreateWeight() {
       entryDate: date,
     };
 
-    // Conditionally attach request ID
     if (attachId !== null) {
       if (requestType === "inbound") {
         return {
@@ -104,7 +97,6 @@ export default function CreateWeight() {
       }
     }
 
-    // No attachment
     return baseBody;
   };
 
@@ -132,6 +124,10 @@ export default function CreateWeight() {
     fetchInbounds();
     fetchOutbounds();
   }, []);
+
+  useEffect(() => {
+    setAttachId(null);
+  }, [requestType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -358,6 +354,27 @@ export default function CreateWeight() {
               </button>
             </div>
 
+            {attachId !== null && (
+              <div
+                style={{
+                  background: "#ecfeff",
+                  border: "1px solid #67e8f9",
+                  borderRadius: "10px",
+                  padding: "0.75rem 1rem",
+                  marginTop: "1rem",
+                  color: "#0f766e",
+                  fontWeight: 500,
+                  textAlign: "center",
+                }}
+              >
+                ✅ Attached {requestType === "inbound" ? "Inbound" : "Outbound"}{" "}
+                Request
+                <span style={{ marginLeft: 6, fontWeight: 700 }}>
+                  #{attachId}
+                </span>
+              </div>
+            )}
+
             {/* Show inbound list if Attach Inbound Request is active */}
             {requestType === "inbound" && inbounds.length > 0 && (
               <div
@@ -383,12 +400,19 @@ export default function CreateWeight() {
                     <li
                       key={inb.id}
                       style={{
-                        background: "#fff",
-                        border: "1px solid #bae6fd",
+                        background: attachId === inb.id ? "#ecfeff" : "#fff",
+                        border:
+                          attachId === inb.id
+                            ? "2px solid #22d3ee"
+                            : "1px solid #bae6fd",
                         borderRadius: "8px",
                         marginBottom: "0.75rem",
                         padding: "0.75rem 1rem",
-                        boxShadow: "0 2px 8px rgba(56,189,248,0.06)",
+                        boxShadow:
+                          attachId === inb.id
+                            ? "0 4px 12px rgba(34,211,238,0.25)"
+                            : "0 2px 8px rgba(56,189,248,0.06)",
+                        transition: "all 0.2s ease",
                       }}
                     >
                       <div style={{ fontWeight: 600, color: "#2563eb" }}>
@@ -428,12 +452,18 @@ export default function CreateWeight() {
                         <span>Description: {inb.description}</span>
                       </div>
                       <div style={{ marginTop: 12 }}>
-                        <Button
-                          variant="danger"
-                          onClick={() => setAttachId(inb.id)}
-                        >
-                          Attach
-                        </Button>
+                        {attachId === inb.id ? (
+                          <Button variant="secondary" disabled>
+                            ✓ Attached
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="danger"
+                            onClick={() => setAttachId(inb.id)}
+                          >
+                            Attach
+                          </Button>
+                        )}
                       </div>
                     </li>
                   ))}
@@ -465,12 +495,18 @@ export default function CreateWeight() {
                     <li
                       key={outb.id}
                       style={{
-                        background: "#fff",
-                        border: "1px solid #fde68a",
+                        background: attachId === outb.id ? "#fef3c7" : "#fff",
+                        border:
+                          attachId === outb.id
+                            ? "2px solid #f59e0b"
+                            : "1px solid #fde68a",
                         borderRadius: "8px",
                         marginBottom: "0.75rem",
                         padding: "0.75rem 1rem",
-                        boxShadow: "0 2px 8px rgba(253,230,138,0.06)",
+                        boxShadow:
+                          attachId === outb.id
+                            ? "0 4px 12px rgba(245,158,11,0.25)"
+                            : "0 2px 8px rgba(253,230,138,0.06)",
                       }}
                     >
                       <div style={{ fontWeight: 600, color: "#b45309" }}>
@@ -490,6 +526,20 @@ export default function CreateWeight() {
                         <span>
                           Completed: {outb.completed === "Y" ? "Yes" : "No"}
                         </span>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        {attachId === outb.id ? (
+                          <Button variant="secondary" disabled>
+                            ✓ Attached
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="danger"
+                            onClick={() => setAttachId(outb.id)}
+                          >
+                            Attach
+                          </Button>
+                        )}
                       </div>
                     </li>
                   ))}

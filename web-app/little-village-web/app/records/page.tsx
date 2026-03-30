@@ -32,6 +32,16 @@ export default function RecordsPage() {
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const tagPillStyle: React.CSSProperties = {
+    background: "#dbeafe",
+    color: "#1e40af",
+    padding: "0.25rem 0.65rem",
+    borderRadius: "999px",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  };
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -163,6 +173,25 @@ export default function RecordsPage() {
                     <div style={{ fontWeight: 600, color: "#2563eb" }}>
                       {inb.location} &mdash; {inb.category}
                     </div>
+                    {/* Tags */}
+                    {inb.tags && inb.tags.length > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.4rem",
+                          flexWrap: "wrap",
+                          marginTop: "0.4rem",
+                          marginBottom: "0.6rem",
+                        }}
+                      >
+                        {inb.tags.map((tag, idx) => (
+                          <span key={idx} style={tagPillStyle}>
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <div style={{ color: "#374151", fontSize: "0.97em" }}>
                       Supplier: {inb.supplierOrganisation} | Contact:{" "}
                       {inb.contact}
@@ -259,14 +288,48 @@ export default function RecordsPage() {
                     }}
                   >
                     <div style={{ fontWeight: 600, color: "#2563eb" }}>
-                      {w.childName} ({w.category})
+                      {w.name || w.childName} ({w.category})
                     </div>
                     <div style={{ color: "#374151", fontSize: "0.97em" }}>
                       Date:{" "}
-                      {w.date ? new Date(w.date).toLocaleDateString() : "-"}
+                      {w.entryDate || w.date
+                        ? new Date(w.entryDate || w.date).toLocaleDateString()
+                        : "-"}
                     </div>
-                    <div style={{ color: "#374151", fontSize: "0.97em" }}>
-                      Containers: {w.containers?.join(", ")}
+                    <div
+                      style={{
+                        color: "#374151",
+                        fontSize: "0.97em",
+                        marginTop: 8,
+                      }}
+                    >
+                      <strong>Containers:</strong>
+                      <ul style={{ margin: 0, paddingLeft: 18 }}>
+                        {w.containers && w.containers.length > 0 ? (
+                          w.containers.map((c, idx) => (
+                            <li
+                              key={idx}
+                              style={{ color: "#374151", fontSize: "0.97em" }}
+                            >
+                              Type ID: {c.typeId} | Gross Weight:{" "}
+                              {c.grossWeight}kg | Net Weight:{" "}
+                              {c.containerNetWeight}kg
+                            </li>
+                          ))
+                        ) : (
+                          <li style={{ color: "#888" }}>No containers</li>
+                        )}
+                      </ul>
+                    </div>
+                    <div
+                      style={{
+                        color: "#374151",
+                        fontSize: "0.97em",
+                        marginTop: 8,
+                      }}
+                    >
+                      <strong>Net Weight:</strong>{" "}
+                      {w.netWeight !== undefined ? `${w.netWeight}kg` : "-"}
                     </div>
 
                     <div style={{ marginTop: 12 }}>
